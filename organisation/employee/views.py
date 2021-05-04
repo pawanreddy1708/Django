@@ -32,28 +32,34 @@ def createOne(request):
         return redirect('/api/find-all')
     else:
         name = request.POST.get('name')
-        age = request.POST.get('age')
+        age = int(request.POST.get('age'))
         designation = request.POST.get('designation')
         if name != None and name != '' and age != None and age > 0 and designation != None and designation!='':
             serializer = UserSerializer(data=request.POST)
             if serializer.is_valid():
                 serializer.save()
                 return redirect('/api/find-all')
-            else:
-                return Response("Inalid data/ empty data")
-        else:
-            return Response('Empty in one of the fields')
+            return Response("Inalid data/ empty data")
+        return Response('Empty in one of the fields')
 
 @api_view(['GET'])
 def findOne(request,pk):
-    emp = User.objects.get(_id=pk)
+    emp = User.objects.get(id=pk)
+    serializer = UserSerializer(emp)
+    return Response(serializer.data)
 
+@api_view(['PUT','DELETE'])
+def updateOrDeleteOne(request,pk):
+    emp = User.objects.get(id=pk)
+    if request.method == "PUT":
+        serializer = UserSerializer(instance=emp,data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    elif request.method == "DELETE":
+        emp.delete()
+        return Response("user with ID: {} is deleted".format(pk))
 
-@api_view(['PUT'])
-def updateOne(request):
-    pass
-
-@api_view(['DELETE'])
-def deleteOne(request):
-    pass
+    
 
