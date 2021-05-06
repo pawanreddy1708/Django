@@ -28,14 +28,14 @@ class ProductCreateAPI(ListCreateAPIView):
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
 
-    # def get_queryset(self):
-    #     try:
-    #         all= self.get_queryset()
-    #         serializer = ProductSerializer(data=all,many=True)
-    #         return Response(serializer.data,status=status.HTTP_200_OK)
-    #     except SQLDecodeError as e:
-    #         return Response({'response':'could not fetch the products from DB'},status=status.HTTP_400_BAD_REQUEST)
-    #     except ValidationError as e:
-    #         return Response({'response':'Invalid data'},status=status.HTTP_400_BAD_REQUEST)
-    #     except Exception as e:
-    #         return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+    def list(self, request, *args, **kwargs):
+        try:
+            all= self.get_queryset()
+            serializer = ProductSerializer(all,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        except SQLDecodeError as e:
+            return Response({'response':'could not fetch the products from DB'},status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response({'response':'Invalid data'},status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
