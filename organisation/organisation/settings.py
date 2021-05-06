@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
@@ -20,13 +21,14 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '2jek1^l!pa8nm*0r_2hpr3hn!nwxk-t4w&fd6mak66tq+%s0fd'
+load_dotenv(os.path.join(BASE_DIR,'.env'))
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+AUTH_USER_MODEL = 'user.User'
 
 # Application definition
 
@@ -38,7 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'snippets.apps.SnippetsConfig'
+    'user',
+    'mobile',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
@@ -78,11 +82,18 @@ WSGI_APPLICATION = 'organisation.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME':'testDB',
-        'HOST':'mongodb+srv://mongoUser:mongoUser@cluster0.hykt5.mongodb.net/myFirstDatabase?retryWrites=true&w=majority',
-        'USER':'mongoUser',
-        'PASSWORD':'mongoUser'
+        'NAME':os.environ.get("DB_NAME"),
+        'HOST':os.environ.get("DB_URI"),
+        'USER':os.environ.get("DB_USER"),
+        'PASSWORD':os.environ.get("DB_PASSWORD")
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES':(
+        'user.backends.JWTAuthentication',
+    ),
+
 }
 
 
@@ -123,3 +134,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
+EMAIL_USE_TLS=True
+EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST='smtp.gmail.com'
+EMAIL_PORT=587
+EMAIL_HOST_USER=os.environ.get('EMAIL_HOST')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+REDIS_HOST=os.environ.get('REDIS_HOST')
+REDIS_PORT=os.environ.get('REDIS_PORT')
+
+
+
+
