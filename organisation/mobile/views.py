@@ -2,13 +2,14 @@ from django.shortcuts import render
 from .serializers import WishListSerializer,ProductSerializer
 from rest_framework.response import Response
 from rest_framework import status,permissions,views
-from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView, DestroyAPIView, RetrieveAPIView, \
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView, RetrieveAPIView, \
     GenericAPIView, ListAPIView, RetrieveUpdateAPIView, CreateAPIView
 from user.models import User
 from djongo.exceptions import SQLDecodeError
 from rest_framework.exceptions import ValidationError
-from .models import WishList, Cart, Products
+from .models import WishList, Cart, Products, Order
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
 
 
 
@@ -39,3 +40,131 @@ class ProductCreateAPI(ListCreateAPIView):
             return Response({'response':'Invalid data'},status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+
+class ProductOperationsAPI(RetrieveUpdateDestroyAPIView):
+    serializer_class = ProductSerializer
+    lookup_field = "id"
+    queryset = Products.objects.all()
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+            return Response({'response':f'Instance with ID {instance.id} is deleted'},status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
+        except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        try:
+            serializer.save()
+            return Response({'response':'Updated!'},status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
+        except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+
+class AddToCartAPI(CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    lookup_field = "id"
+
+    def post(self, request, id):
+        quantity = request.data.get('quantity')
+        try:
+            owner = User.objects.get(id=self.request.user.id)
+            product = Products.objects.get(id=id)
+            obj, created = Cart.objects.get_or_create(owner=owner)
+            obj.products.add(product)
+            obj.quantity = quantity
+            obj.save()
+            return Response({'resposne':'Added to cart'},status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
+        except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+
+class SearchProductsAPI(ListAPIView):
+    serializer_class = ProductSerializer
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        try:
+            search_key = self.kwargs['item']
+            return Products.objects.filter(Q(brand__contains=search_key)|Q(model__contains=search_key))
+        except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
+class DisplayBySortedProducts(ListAPIView):
+    serializer_class = ProductSerializer
+    pagination_class = PageNumberPagination
+
+    def get_order_type(self, key):
+        types = {
+            'price-asc':'price','price-desc':'-price','brand-asc':'brand','brand-desc':'-brand',
+            'model-asc':'model','model-desc':'-model','quantity-asc':'quantity','quantity-desc':'-quantity'
+        }
+        return types.get(key,'title')
+
+    def get_queryset(self):
+        try:
+            type = self.kwargs['type']
+            print("type------>",type)
+            value = self.get_order_type(type)
+            print('Value------------>',value)
+            return Products.objects.all().order_by(value)
+        except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PlaceOrderAPI(GenericAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self,request):
+        total_price = 0
+        total_items = 0
+        try:
+            owner = self.request.user
+            order, created = Order.objects.get_or_create(owner=owner)
+            address = request.data.get('address')
+            phone = request.data.get('phone')
+            cart = Cart.objects.filter(owner=owner)
+            owner = User.objects.get(id=self.request.user.id)
+
+            if cart:
+                cart_list=cart.values('products')
+
+                for items in range(len(cart_list)):
+                    product_id = cart_list[items]['products']
+                    product = Products.objects.get(id=product_id)
+                    cart_object = Cart.objects.get(products=product)
+                    order.products.add(product)
+                    order.save()
+                    total_price = total_price + (product.price * cart_object.quantity)
+                    total_items = total_items + 1
+                    cart_object.delete()
+                order.total_price = total_price
+                order.total_items = total_items
+                order.address = address
+                order.phone = phone
+                order.save()
+                email_body = f"Hi {owner.username} your order with id: {order.id} has been placed successfully" \
+                             f"\nTotal items are {total_items}" \
+                             f"\nTotal Price is: {total_price}"
+
+                return Response({'response':'order placed successfully'},status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
+        except SQLDecodeError as e:
+            return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
