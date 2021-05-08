@@ -16,7 +16,7 @@ class Products(models.Model):
 class Cart(models.Model):
     owner=models.OneToOneField(User,on_delete=models.CASCADE)
     products = models.ManyToManyField(Products)
-    quantity = models.IntegerField()
+    quantity = models.IntegerField(null=True)
 
 class Order(models.Model):
     owner = models.OneToOneField(User,on_delete=models.CASCADE)

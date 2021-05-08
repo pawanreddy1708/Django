@@ -80,7 +80,7 @@ class AddToCartAPI(GenericAPIView):
             if quantity <= product.quantity and quantity !=0:
                 obj, created = Cart.objects.get_or_create(owner=owner)
                 obj.products.add(product)
-                obj.quantity = quantity
+                obj.quantity=quantity
                 obj.save()
             else:
                 return Response({'response':'Requested quantity not available'},status=status.HTTP_400_BAD_REQUEST)
@@ -90,6 +90,7 @@ class AddToCartAPI(GenericAPIView):
         except SQLDecodeError as e:
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
+            print(str(e))
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request,id):
