@@ -81,11 +81,12 @@ WSGI_APPLICATION = 'organisation.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME':os.environ.get("DB_NAME"),
         'HOST':os.environ.get("DB_URI"),
         'USER':os.environ.get("DB_USER"),
-        'PASSWORD':os.environ.get("DB_PASSWORD")
+        'PASSWORD':os.environ.get("DB_PASSWORD"),
+        'PORT':os.environ.get("DB_PORT")
     }
 }
 
@@ -138,7 +139,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 EMAIL_USE_TLS=True
 EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST='smtp.gmail.com'
+EMAIL_HOST='smtp.live.com'
 EMAIL_PORT=587
 EMAIL_HOST_USER=os.environ.get('EMAIL_HOST')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')

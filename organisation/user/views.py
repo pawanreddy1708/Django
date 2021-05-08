@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework.generics import GenericAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -39,12 +38,12 @@ class register(GenericAPIView):
         except SQLDecodeError as e:
             return Response({'DB_Connectivity':f'error fetching data from db due to {e}'})
         except Exception as err:
-            return Response(err,status=status.HTTP_400_BAD_REQUEST)
+            return Response(err.__dict__,status=status.HTTP_400_BAD_REQUEST)
 
 
 class verifyOTP(APIView):
 
-    def get(self,request):
+    def post(self,request):
         otp=request.data.get('otp')
         try:
             value = redis_instance.get(otp)

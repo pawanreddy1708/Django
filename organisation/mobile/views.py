@@ -68,23 +68,47 @@ class ProductOperationsAPI(RetrieveUpdateDestroyAPIView):
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
 
-class AddToCartAPI(CreateAPIView):
+class AddToCartAPI(GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     lookup_field = "id"
 
     def post(self, request, id):
-        quantity = request.data.get('quantity')
+        quantity = int(request.data.get('quantity'))
         try:
             owner = User.objects.get(id=self.request.user.id)
             product = Products.objects.get(id=id)
-            obj, created = Cart.objects.get_or_create(owner=owner)
-            obj.products.add(product)
-            obj.quantity = quantity
-            obj.save()
+            if quantity <= product.quantity and quantity !=0:
+                obj, created = Cart.objects.get_or_create(owner=owner)
+                obj.products.add(product)
+                obj.quantity = quantity
+                obj.save()
+            else:
+                return Response({'response':'Requested quantity not available'},status=status.HTTP_400_BAD_REQUEST)
             return Response({'resposne':'Added to cart'},status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
         except SQLDecodeError as e:
+            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self,request,id):
+        try:
+            quantity = int(request.data.get('quantity'))
+            owner = User.objects.get(id=self.request.user.id)
+            product = Products.objects.get(id=id)
+
+            if quantity <= product.quantity and quantity !=0:
+                obj = Cart.objects.get(owner=owner)
+                obj.products = product
+                obj.quantity = quantity
+                obj.save()
+            else:
+                return Response({'response':'Requested quantity not available'},status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
+        except SQLDecodeError as e:
+            print(e)
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
@@ -111,10 +135,11 @@ class DisplayBySortedProducts(ListAPIView):
             'price-asc':'price','price-desc':'-price','brand-asc':'brand','brand-desc':'-brand',
             'model-asc':'model','model-desc':'-model','quantity-asc':'quantity','quantity-desc':'-quantity'
         }
-        return types.get(key,'title')
+        return types[key]
 
-    def get_queryset(self):
+    def list(self, request, *args, **kwargs):
         try:
+            print('------yo--------yo---------yo')
             type = self.kwargs['type']
             print("type------>",type)
             value = self.get_order_type(type)
