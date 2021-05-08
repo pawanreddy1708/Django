@@ -1,9 +1,9 @@
 from django.shortcuts import render
 from .serializers import WishListSerializer,ProductSerializer
 from rest_framework.response import Response
-from rest_framework import status,permissions,views
+from rest_framework import status,permissions
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, \
-    GenericAPIView, ListAPIView
+    GenericAPIView, ListAPIView, DestroyAPIView
 from user.models import User
 from psycopg2 import OperationalError
 from rest_framework.exceptions import ValidationError
@@ -151,7 +151,7 @@ class DisplayBySortedProducts(ListAPIView):
 class PlaceOrderAPI(GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
-    def post(self,request,id):
+    def post(self,request):
         total_price = 0
         total_items = 0
         try:
@@ -191,7 +191,7 @@ class PlaceOrderAPI(GenericAPIView):
         except Exception as e:
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
-class AddWishListAPI(ListCreateAPIView):
+class AddWishListAPI(ListCreateAPIView,DestroyAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = WishListSerializer
     pagination_class = PageNumberPagination
@@ -203,7 +203,9 @@ class AddWishListAPI(ListCreateAPIView):
             obj,created = WishList.objects.get_or_create(owner=owner)
             Product =Products.objects.get(id=id)
             obj.products.add(Product)
+            print("before save")
             obj.save()
+            print("after save")
             return Response({'response':'Added to Wishlist'},status=status.HTTP_201_CREATED)
         except OperationalError as e:
             return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -211,6 +213,7 @@ class AddWishListAPI(ListCreateAPIView):
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
 
     def get_queryset(self):
         try:
@@ -223,3 +226,16 @@ class AddWishListAPI(ListCreateAPIView):
         except Exception as e:
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+    # def destroy(self, request, id):
+    #     try:
+    #         owner = User.objects.get(id=self.request.user.id)
+    #         product = Products.objects.get(id=id)
+    #         obj=WishList.objects.filter(owner=owner)
+    #         obj.products.remove(product)
+    #     except OperationalError as e:
+    #         return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    #     except ValidationError as e:
+    #         return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
+    #     except Exception as e:
+    #         return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
