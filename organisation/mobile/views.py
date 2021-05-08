@@ -2,10 +2,10 @@ from django.shortcuts import render
 from .serializers import WishListSerializer,ProductSerializer
 from rest_framework.response import Response
 from rest_framework import status,permissions,views
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView, RetrieveAPIView, \
-    GenericAPIView, ListAPIView, RetrieveUpdateAPIView, CreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, \
+    GenericAPIView, ListAPIView
 from user.models import User
-from djongo.exceptions import SQLDecodeError
+from psycopg2 import OperationalError
 from rest_framework.exceptions import ValidationError
 from .models import WishList, Cart, Products, Order
 from rest_framework.pagination import PageNumberPagination
@@ -22,7 +22,7 @@ class ProductCreateAPI(ListCreateAPIView):
         try:
             serializer.save()
             return Response({'response':'Product added successfully'},status=status.HTTP_201_CREATED)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'Could not add the product to DB'},status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             return Response({'response':'Invalid data'},status=status.HTTP_400_BAD_REQUEST)
@@ -34,7 +34,7 @@ class ProductCreateAPI(ListCreateAPIView):
             all= self.get_queryset()
             serializer = ProductSerializer(all,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'could not fetch the products from DB'},status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             return Response({'response':'Invalid data'},status=status.HTTP_400_BAD_REQUEST)
@@ -52,7 +52,7 @@ class ProductOperationsAPI(RetrieveUpdateDestroyAPIView):
             return Response({'response':f'Instance with ID {instance.id} is deleted'},status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
@@ -63,7 +63,7 @@ class ProductOperationsAPI(RetrieveUpdateDestroyAPIView):
             return Response({'response':'Updated!'},status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'response':'Something went wrong'},status=status.HTTP_400_BAD_REQUEST)
@@ -87,7 +87,7 @@ class AddToCartAPI(GenericAPIView):
             return Response({'resposne':'Added to cart'},status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             print(str(e))
@@ -108,7 +108,7 @@ class AddToCartAPI(GenericAPIView):
                 return Response({'response':'Requested quantity not available'},status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             print(e)
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
@@ -122,7 +122,7 @@ class SearchProductsAPI(ListAPIView):
         try:
             search_key = self.kwargs['item']
             return Products.objects.filter(Q(brand__contains=search_key)|Q(model__contains=search_key))
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
@@ -130,7 +130,6 @@ class SearchProductsAPI(ListAPIView):
 class DisplayBySortedProducts(ListAPIView):
     serializer_class = ProductSerializer
     pagination_class = PageNumberPagination
-
     def get_order_type(self, key):
         types = {
             'price-asc':'price','price-desc':'-price','brand-asc':'brand','brand-desc':'-brand',
@@ -138,24 +137,21 @@ class DisplayBySortedProducts(ListAPIView):
         }
         return types[key]
 
-    def list(self, request, *args, **kwargs):
+    def get_queryset(self):
         try:
-            print('------yo--------yo---------yo')
             type = self.kwargs['type']
-            print("type------>",type)
             value = self.get_order_type(type)
-            print('Value------------>',value)
             return Products.objects.all().order_by(value)
-        except SQLDecodeError as e:
-            return Response({'response':'Could not connect to DB'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except OperationalError as e:
+            return Response({'Message': 'Failed to connect with the database'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Message': 'Error Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PlaceOrderAPI(GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
-    def post(self,request):
+    def post(self,request,id):
         total_price = 0
         total_items = 0
         try:
@@ -190,7 +186,40 @@ class PlaceOrderAPI(GenericAPIView):
                 return Response({'response':'order placed successfully'},status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
+class AddWishListAPI(ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = WishListSerializer
+    pagination_class = PageNumberPagination
+    lookup_field = "id"
+
+    def post(self,request,id):
+        try:
+            owner = self.request.user
+            obj,created = WishList.objects.get_or_create(owner=owner)
+            Product =Products.objects.get(id=id)
+            obj.products.add(Product)
+            obj.save()
+            return Response({'response':'Added to Wishlist'},status=status.HTTP_201_CREATED)
+        except OperationalError as e:
+            return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValidationError as e:
+            return Response({'response':'Invalid Data'},status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_queryset(self):
+        try:
+            owner = User.objects.get(id=self.request.user.id)
+            return WishList.objects.filter(owner=owner)
+        except OperationalError as e:
+            return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValidationError as e:
+            return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+

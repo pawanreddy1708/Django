@@ -7,6 +7,7 @@ urlpatterns = [
     path('cart/<str:id>/',views.AddToCartAPI().as_view(),name="Add products to CART"),
     re_path('search/(?P<item>.+)/$',views.SearchProductsAPI().as_view(),name="Search result"),
     re_path('search/sort/(?P<type>.+)/$',views.DisplayBySortedProducts().as_view(),name="Search sorted"),
-    path('place-order/',views.PlaceOrderAPI().as_view(),name="Place order"),
+    path('place-order/<id>/',views.PlaceOrderAPI().as_view(),name="Place order"),
+    path('wish-list/<id>/',views.AddWishListAPI().as_view(),name="Add to Wish List")
 
 ]

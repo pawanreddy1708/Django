@@ -21,10 +21,10 @@ class Cart(models.Model):
 class Order(models.Model):
     owner = models.OneToOneField(User,on_delete=models.CASCADE)
     products = models.ManyToManyField(Products)
-    address = models.CharField(max_length=1024)
-    phone = models.BigIntegerField()
-    total_price = models.FloatField()
-    total_items = models.IntegerField()
+    address = models.CharField(max_length=1024,null=True)
+    phone = models.BigIntegerField(null=True)
+    total_price = models.FloatField(null=True)
+    total_items = models.IntegerField(null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     is_delivered = models.BooleanField(default=False)
 
