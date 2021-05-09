@@ -151,15 +151,15 @@ class DisplayBySortedProducts(ListAPIView):
 class PlaceOrderAPI(GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
-    def post(self,request):
+    def post(self, request,id):
         total_price = 0
         total_items = 0
         try:
             owner = self.request.user
-            order, created = Order.objects.get_or_create(owner=owner)
+            order, created = Order.objects.get_or_create(owner_id=owner.id)
             address = request.data.get('address')
             phone = request.data.get('phone')
-            cart = Cart.objects.filter(owner=owner)
+            cart = Cart.objects.filter(owner_id=owner.id)
             owner = User.objects.get(id=self.request.user.id)
 
             if cart:
@@ -185,15 +185,16 @@ class PlaceOrderAPI(GenericAPIView):
                 data = {
                     "email_body":email_body,
                     "email_subject":"Order placed",
-                    "to_email":owner.email
+                    "to_email":[owner.email]
                 }
-                Util.send_mail(data)
+                Util.send_mail(self,data=data)
                 return Response({'response':'order placed successfully'},status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
         except OperationalError as e:
             return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
+            print(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AddWishListAPI(ListCreateAPIView,DestroyAPIView):

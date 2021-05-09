@@ -5,7 +5,7 @@ from psycopg2 import OperationalError
 from .models import Order
 from rest_framework.exceptions import ValidationError
 from celery import shared_task
-
+from django.conf import settings
 
 class Util:
     @shared_task
@@ -13,6 +13,7 @@ class Util:
         email = EmailMessage(
             subject=data['email_subject'],
             body=data['email_body'],
+            from_email= settings.EMAIL_HOST_USER,
             to=data['to_email']
         )
         email.send()
