@@ -232,17 +232,21 @@ class AddWishListAPI(ListCreateAPIView,DestroyAPIView):
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-    # def destroy(self, request, id):
-    #     try:
-    #         owner = User.objects.get(id=self.request.user.id)
-    #         product = Products.objects.get(id=id)
-    #         obj=WishList.objects.filter(owner=owner.id)
-    #         obj.products.remove(product)
-    #     except OperationalError as e:
-    #         return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    #     except ValidationError as e:
-    #         return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
-    #     except Exception as e:
-    #         print(e)
-    #         return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+    def destroy(self, request, id):
+        try:
+            owner = User.objects.get(id=self.request.user.id)
+            product = Products.objects.get(id=id)
+            obj=WishList.objects.filter(owner=owner.id)
+            if obj:
+                obj.delete()
+                return Response({'response':'deleted item from wish list'},status=status.HTTP_200_OK)
+            else:
+                return Response({'response':'Invalid Id to delete'},status=status.HTTP_400_BAD_REQUEST)
+        except OperationalError as e:
+            return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValidationError as e:
+            return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(e)
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
