@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'user',
     'mobile',
-    'drf_yasg'
+    'drf_yasg',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -99,6 +100,16 @@ REST_FRAMEWORK = {
 
 }
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS':{
+        "Auth Token eg [Bearer (JWT) ]":{
+            "type":"apiKey",
+            "name":"Authorization",
+            "in":"header"
+        }
+    }
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
@@ -145,6 +156,15 @@ EMAIL_HOST_USER=os.environ.get('EMAIL_HOST')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
 REDIS_HOST=os.environ.get('REDIS_HOST')
 REDIS_PORT=os.environ.get('REDIS_PORT')
+CELERY_BROKER_URL='redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_ACCEPT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_IMPORTS = (
+    'mobile.utils'
+)
+CELERY_TASK_ALWAYS_EAGER =True
 
 
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from .utils import Util
 from .serializers import WishListSerializer,ProductSerializer
 from rest_framework.response import Response
 from rest_framework import status,permissions
@@ -182,7 +182,12 @@ class PlaceOrderAPI(GenericAPIView):
                 email_body = f"Hi {owner.username} your order with id: {order.id} has been placed successfully" \
                              f"\nTotal items are {total_items}" \
                              f"\nTotal Price is: {total_price}"
-
+                data = {
+                    "email_body":email_body,
+                    "email_subject":"Order placed",
+                    "to_email":owner.email
+                }
+                Util.send_mail(data)
                 return Response({'response':'order placed successfully'},status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
@@ -231,11 +236,13 @@ class AddWishListAPI(ListCreateAPIView,DestroyAPIView):
     #     try:
     #         owner = User.objects.get(id=self.request.user.id)
     #         product = Products.objects.get(id=id)
-    #         obj=WishList.objects.filter(owner=owner)
+    #         obj=WishList.objects.filter(owner=owner.id)
     #         obj.products.remove(product)
     #     except OperationalError as e:
     #         return Response({'response': 'Could not connect to DB'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     #     except ValidationError as e:
     #         return Response({'response': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
     #     except Exception as e:
+    #         print(e)
     #         return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
+
