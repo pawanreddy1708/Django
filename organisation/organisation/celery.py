@@ -14,6 +14,7 @@ app = Celery('organisation')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django app configs.
+##scheduled 15 seconds
 app.conf.beat_schedule = {
     'every-15-seconds': {
         'task': 'mobile.utils.send_delivery_email',
@@ -21,6 +22,7 @@ app.conf.beat_schedule = {
         'args': ('',)
     }
 }
+
 
 app.conf.timezone = 'UTC'
 
