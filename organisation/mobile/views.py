@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 from .models import WishList, Cart, Products, Order
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
-
+from rest_framework.filters import SearchFilter
 
 
 class ProductCreateAPI(ListCreateAPIView):
@@ -117,7 +117,9 @@ class AddToCartAPI(GenericAPIView):
 class SearchProductsAPI(ListAPIView):
     serializer_class = ProductSerializer
     pagination_class = PageNumberPagination
-
+    filter_backends = [SearchFilter]
+    search_fields=['^brand','^model']
+    queryset = Products.objects.all()
     def get_queryset(self):
         try:
             search_key = self.kwargs['item']

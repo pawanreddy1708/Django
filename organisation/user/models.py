@@ -4,12 +4,13 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 class UserManager(BaseUserManager):
 
-    def create_user(self,email,username,phone,password=None):
+    def create_user(self,email,username,phone,password):
         if username is None:
             raise TypeError('user should have a username')
         if email is None:
             raise TypeError('user should have a mail ID')
-        
+
+
         user = self.model(
             username=username,
             email=self.normalize_email(email),
@@ -21,12 +22,12 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, email, username, password=None):
-        
+    def create_superuser(self, email, username, password):
+
         if password is None:
             raise TypeError("Password for super user cannot be empty")
 
-        user = self.create_user(email,username,password)
+        user = self.create_user(email=email,username=username)
         user.is_superuser=True
         user.is_staff =True
         user.is_active = True
@@ -43,7 +44,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     is_staff=models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
     phone = models.BigIntegerField()
-
+    password = models.CharField(max_length=256)
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
@@ -54,4 +55,4 @@ class User(AbstractBaseUser,PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
+

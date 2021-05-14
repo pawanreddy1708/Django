@@ -2,9 +2,9 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
-from djongo.exceptions import SQLDecodeError
+from rest_framework import permissions
 from .serializers import UserSerializer,LoginSerializer
+from psycopg2 import OperationalError
 from django.conf import settings
 from .models import User
 import random
@@ -18,11 +18,12 @@ class register(GenericAPIView):
     serializer_class = UserSerializer
     def post(self,request):
         try:
-            serializer = UserSerializer(data=request.data)
+            serializer = self.serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             user_data = serializer.data
             user = User.objects.get(email=user_data['email'])
+
             user.is_active = False
             user_otp = random.randint(100000,999999)
             mess = f"Hello {user.username} your otp is :{user_otp}\nthanks"
@@ -35,7 +36,7 @@ class register(GenericAPIView):
                       )
             redis_instance.set(user_otp,user.id)
             return Response({"User":"User created kindly check your mail for the OTP"},status=status.HTTP_201_CREATED)
-        except SQLDecodeError as e:
+        except OperationalError as e:
             return Response({'DB_Connectivity':f'error fetching data from db due to {e}'})
         except Exception as err:
             return Response(err.__dict__,status=status.HTTP_400_BAD_REQUEST)
